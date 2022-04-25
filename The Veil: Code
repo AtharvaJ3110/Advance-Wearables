@@ -1,0 +1,75 @@
+# import time
+import board
+import array
+import math
+import audiobusio
+from rainbowio import colorwheel
+import neopixel
+from adafruit_circuitplayground import cp
+
+
+pixel_pin = board.A1
+num_pixels = 50
+
+pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=0.02, auto_write=False)
+
+
+def mean(values):
+    return sum(values) / len(values)
+
+
+def normalized_rms(values):
+    minbuf = int(mean(values))
+    sum_of_samples = sum(
+        float(sample - minbuf) * (sample - minbuf) for sample in values
+    )
+
+    return math.sqrt(sum_of_samples / len(values) * 0.3)
+
+
+mic = audiobusio.PDMIn(
+    board.MICROPHONE_CLOCK, board.MICROPHONE_DATA, sample_rate=16000, bit_depth=16
+)
+samples = array.array("H", [0] * 160)
+mic.record(samples, len(samples))
+
+
+def color_chase():
+    for i in range(num_pixels):
+        pixels[i] = 179+accelx*accely*accelz
+        pixels.show()
+
+
+def rainbow_cycle(lev):
+    for j in range(255):
+        mic.record(samples, len(samples))
+        magnitude = normalized_rms(samples)
+        print(((magnitude),))
+        for i in range(num_pixels):
+            rc_index = (i * int(magnitude) // num_pixels) + j*0.5
+            pixels[i] = colorwheel(rc_index & 255)
+        pixels.show()
+
+
+RED = (255, 0, 0)
+YELLOW = (255, 150, 0)
+GREEN = (0, 255, 0)
+CYAN = (0, 255, 255)
+BLUE = (0, 0, 255)
+PURPLE = (180, 0, 255)
+
+while True:
+    for j in range(150):
+        accelx, accely, accelz = cp.acceleration
+        mic.record(samples, len(samples))
+        magnitude = normalized_rms(samples)
+        print(((magnitude),))
+        for i in range(num_pixels):
+            if magnitude <= 120.0:
+                pixels[i] = 179*accelx*accely*accelz
+                pixels.show()
+            else:
+                rc_index = (i * 30+int(magnitude) // num_pixels) + j
+                pixels[i] = colorwheel(rc_index & 255)
+                pixels.show()
+       
